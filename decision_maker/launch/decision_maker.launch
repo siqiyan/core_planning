@@ -16,7 +16,8 @@
   <arg name="goal_threshold_vel" default="0.1" />
   <arg name="stopped_vel" default="0.1" />
   <arg name="stopline_reset_count" default="20" />
-  <arg name="sim_mode" default="false" />
+  <!--<arg name="sim_mode" default="false" />-->
+  <arg name="sim_mode" default="true" />
   <arg name="use_ll2" default="false" />
   <arg name="stop_sign_id" default="stop_sign" />
   <arg name="insert_stop_line_wp" default="true" />

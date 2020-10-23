@@ -269,6 +269,10 @@ void GlobalPlanner::VisualizeAndSend(const std::vector<std::vector<PlannerHNS::W
   {
     autoware_msgs::Lane lane;
     PlannerHNS::ROSHelpers::ConvertFromLocalLaneToAutowareLane(generatedTotalPaths.at(i), lane);
+    for(unsigned int j = 0; j < lane.waypoints.size(); j++) {
+        lane.waypoints.at(j).twist.twist.linear.x = 2.0;
+        //ROS_INFO("x: %f\n", lane.waypoints.at(j).twist.twist.linear.x);
+    }
     lane_array.lanes.push_back(lane);
   }
 
@@ -460,29 +464,58 @@ void GlobalPlanner::MainLoop()
 
     ClearOldCostFromMap();
 
-    if(m_GoalsPos.size() > 0)
-    {
-      if(m_GeneratedTotalPaths.size() > 0 && m_GeneratedTotalPaths.at(0).size() > 3)
-      {
-        if(m_params.bEnableReplanning)
-        {
+    ROS_INFO("m_GoalsPos.size(): %d\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@", m_GoalsPos.size());
+    ROS_INFO("bMakeNewPlan: %d\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@", bMakeNewPlan);
+
+    if(m_GoalsPos.size() > 0) {
+      if(m_GeneratedTotalPaths.size() > 0
+          && m_GeneratedTotalPaths.at(0).size() > 3
+      ) {
+          if(m_params.bEnableReplanning) {
           PlannerHNS::RelativeInfo info;
-          bool ret = PlannerHNS::PlanningHelpers::GetRelativeInfoRange(m_GeneratedTotalPaths, m_CurrentPose, 0.75, info);
-          if(ret == true && info.iGlobalPath >= 0 &&  info.iGlobalPath < m_GeneratedTotalPaths.size() && info.iFront > 0 && info.iFront < m_GeneratedTotalPaths.at(info.iGlobalPath).size())
-          {
-            double remaining_distance =    m_GeneratedTotalPaths.at(info.iGlobalPath).at(m_GeneratedTotalPaths.at(info.iGlobalPath).size()-1).cost - (m_GeneratedTotalPaths.at(info.iGlobalPath).at(info.iFront).cost + info.to_front_distance);
-            if(remaining_distance <= REPLANNING_DISTANCE)
-            {
-              bMakeNewPlan = true;
-              if(m_GoalsPos.size() > 0)
-                m_iCurrentGoalIndex = (m_iCurrentGoalIndex + 1) % m_GoalsPos.size();
-              std::cout << "Current Goal Index = " << m_iCurrentGoalIndex << std::endl << std::endl;
+          bool ret = PlannerHNS::PlanningHelpers::GetRelativeInfoRange(
+              m_GeneratedTotalPaths, m_CurrentPose, 0.75, info
+          );
+          if(ret == true && info.iGlobalPath >= 0
+              && info.iGlobalPath < m_GeneratedTotalPaths.size()
+              && info.iFront > 0
+              && info.iFront < m_GeneratedTotalPaths.at(
+                  info.iGlobalPath
+              ).size()
+          ) {
+            double remaining_distance =
+                m_GeneratedTotalPaths.at(
+                    info.iGlobalPath
+                ).at(
+                    m_GeneratedTotalPaths.at(
+                        info.iGlobalPath
+                    ).size()-1
+                ).cost - (
+                    m_GeneratedTotalPaths.at(
+                        info.iGlobalPath
+                    ).at(
+                        info.iFront
+                    ).cost + info.to_front_distance
+                );
+            //ROS_INFO("remaining_distance: %f\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@", remaining_distance);
+            if(remaining_distance <= 5) {
+                // Arrived
+                //m_GoalsPos.erase(m_GoalsPos.begin());
+                m_GoalsPos.clear();
+                m_GeneratedTotalPaths.clear();
             }
+            //if(remaining_distance <= REPLANNING_DISTANCE) {
+              //bMakeNewPlan = true;
+              //if(m_GoalsPos.size() > 0) {
+                  //m_iCurrentGoalIndex = (m_iCurrentGoalIndex + 1) % m_GoalsPos.size();
+              //}
+              //std::cout << "Current Goal Index = " << m_iCurrentGoalIndex << std::endl << std::endl;
+            //}
           }
         }
-      }
-      else
+      } else {
         bMakeNewPlan = true;
+      }
 
       if(bMakeNewPlan || (m_params.bEnableDynamicMapUpdate && UtilityHNS::UtilityH::GetTimeDiffNow(m_ReplnningTimer) > REPLANNING_TIME))
       {
